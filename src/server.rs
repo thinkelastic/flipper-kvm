@@ -33,7 +33,6 @@ use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post, put};
 use axum::{Json, Router};
-use axum_server::tls_rustls::RustlsConfig;
 use bytes::Bytes;
 use futures_util::StreamExt;
 use serde::Deserialize;
@@ -57,7 +56,7 @@ pub async fn serve(shared: Arc<Shared>) -> std::io::Result<()> {
     shared.changed();
     // No upload can be in progress yet: what is left over from an interrupted one goes.
     drive::remove_partials();
-    let config = RustlsConfig::from_pem(cert, key).await?;
+    let config = tls::server_config(&cert, &key)?;
     let port = shared.config.port;
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
     eprintln!("server: https://0.0.0.0:{port}/");
@@ -94,7 +93,14 @@ pub fn router(shared: Arc<Shared>) -> Router {
 
 /// On every response: security headers. On every state-changing request: the Origin, if
 /// the browser sent one, must be this server, so another site cannot post with the cookie.
-async fn guard(req: Request, next: Next) -> Response {
+async fn guard(mut req: Request, next: Next) -> Response {
+    // Over HTTP/2 the host arrives as :authority, which lands in the URI and not in a
+    // Host header; put it there, so the Origin check and the page's policy see it.
+    if !req.headers().contains_key(header::HOST) {
+        if let Some(v) = req.uri().authority().and_then(|a| HeaderValue::from_str(a.as_str()).ok()) {
+            req.headers_mut().insert(header::HOST, v);
+        }
+    }
     if !matches!(*req.method(), Method::GET | Method::HEAD) && req.headers().contains_key(header::ORIGIN) && !same_origin(req.headers()) {
         return (StatusCode::FORBIDDEN, "cross-origin request refused").into_response();
     }
@@ -686,6 +692,24 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(res.status(), StatusCode::FORBIDDEN);
+    }
+
+    /// HTTP/2 sends the authority in the URI and no Host header; the request must still
+    /// pass the Origin check and reach the handler.
+    #[tokio::test]
+    async fn a_request_without_a_host_header_uses_the_uri_authority() {
+        let (s, _rx) = crate::state::test_shared();
+        let body = format!(r#"{{"code":"{}"}}"#, s.code());
+        let mut req = HttpRequest::builder()
+            .method("POST")
+            .uri("https://10.0.0.5:8443/api/pair")
+            .header("content-type", "application/json")
+            .header("origin", "https://10.0.0.5:8443")
+            .body(Body::from(body))
+            .unwrap();
+        req.extensions_mut().insert(ConnectInfo(SocketAddr::from(([10, 0, 0, 9], 5555))));
+        let res = router(s).oneshot(req).await.unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
     }
 
     #[tokio::test]

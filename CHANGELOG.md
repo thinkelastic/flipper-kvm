@@ -1,5 +1,12 @@
 # Changelog
 
+v0.1.1:
+Fixes pairing from browsers (2026-11-07). Browsers speak HTTP/2, which carries the host
+as :authority and sends no Host header, so the Origin check refused every pairing POST
+and websocket with "Could not connect". The server now offers HTTP/1.1 only, and a
+request without a Host header takes it from the URL. Also: CI clones flipctl-slint
+before restoring its build cache, and uses current action versions.
+
 v0.1:
 First release (2026-11-07). Built and tested in the Flipper One VM; not yet tried on a
 real Flipper One (see *Status* in the README).

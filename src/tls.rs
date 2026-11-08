@@ -10,7 +10,7 @@ use axum_server::accept::Accept;
 use axum_server::tls_rustls::{RustlsAcceptor, RustlsConfig};
 use futures_util::future::BoxFuture;
 use rustls::pki_types::pem::PemObject;
-use rustls::pki_types::CertificateDer;
+use rustls::pki_types::{CertificateDer, PrivateKeyDer};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 
@@ -32,6 +32,22 @@ pub fn certificate(dir: &Path) -> io::Result<(Vec<u8>, Vec<u8>)> {
     f.write_all(made.key_pair.serialize_pem().as_bytes())?;
     drop(f);
     Ok((std::fs::read(&cert)?, std::fs::read(&key)?))
+}
+
+/// TLS with this certificate, offering HTTP/1.1 only. Over HTTP/2 a browser sends the
+/// host as the :authority pseudo-header and no Host header, which the Origin check and
+/// the page's policy read; one protocol keeps every browser on the same, tested path,
+/// and HTTP/2 would not make the video (a websocket) any faster.
+pub fn tls_config(cert_pem: &[u8], key_pem: &[u8]) -> io::Result<rustls::ServerConfig> {
+    let certs = CertificateDer::pem_slice_iter(cert_pem).collect::<Result<Vec<_>, _>>().map_err(io::Error::other)?;
+    let key = PrivateKeyDer::from_pem_slice(key_pem).map_err(io::Error::other)?;
+    let mut config = rustls::ServerConfig::builder().with_no_client_auth().with_single_cert(certs, key).map_err(io::Error::other)?;
+    config.alpn_protocols = vec![b"http/1.1".to_vec()];
+    Ok(config)
+}
+
+pub fn server_config(cert_pem: &[u8], key_pem: &[u8]) -> io::Result<RustlsConfig> {
+    Ok(RustlsConfig::from_config(std::sync::Arc::new(tls_config(cert_pem, key_pem)?)))
 }
 
 /// SHA-256 of the certificate as browsers show it: "AB:CD:...".
@@ -142,10 +158,15 @@ mod tests {
     #[test]
     fn fingerprint_of_a_made_certificate() {
         let dir = std::env::temp_dir().join(format!("kvm-tls-test-{}", std::process::id()));
-        let (cert, _) = certificate(&dir).unwrap();
+        let (cert, key) = certificate(&dir).unwrap();
         let fp = fingerprint(&cert);
         assert_eq!(fp.len(), 32 * 3 - 1);
         assert_eq!(certificate(&dir).unwrap().0, cert, "kept, not remade");
+
+        // Browsers must not pick HTTP/2: it leaves the Host header out.
+        let _ = rustls::crypto::ring::default_provider().install_default();
+        let config = tls_config(&cert, &key).unwrap();
+        assert_eq!(config.alpn_protocols, vec![b"http/1.1".to_vec()]);
         std::fs::remove_dir_all(dir).unwrap();
     }
 }

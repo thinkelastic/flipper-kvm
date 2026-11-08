@@ -34,6 +34,17 @@ or no working OS yet (BIOS, installers, a crashed system).
 - **The Flipper's screen** shows the pairing code, the address, what is connected and the
   certificate fingerprint. **Setup** installs the USB side from the panel.
 
+## Screenshots
+
+The Flipper's panel, and the page in a browser:
+
+<p>
+  <img src="screenshots/flipper-0.png" alt="The panel: code, address, video, keyboard, drive, browsers" width="256" height="144">
+  <img src="screenshots/flipper-1.png" alt="The panel with a browser connected and an image in the drive" width="256" height="144">
+</p>
+
+![The web page: the remote screen with the toolbar](screenshots/web.png)
+
 ## What you need
 
 - A Flipper One (FlipperOS, firmware build 2484 or later).

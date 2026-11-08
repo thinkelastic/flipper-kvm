@@ -1,9 +1,8 @@
 # Changelog
 
-## 0.1.0 — 2026-11-07
-
-First release. Built and tested in the Flipper One VM; not yet tried on a real Flipper
-One (see *Status* in the README).
+v0.1:
+First release (2026-11-07). Built and tested in the Flipper One VM; not yet tried on a
+real Flipper One (see *Status* in the README).
 
 - Capture from UVC HDMI dongles (MJPEG pass-through with Huffman tables restored, YUYV
   encoded), with a no-signal watchdog, hot-plug and a demo screen.
@@ -18,18 +17,11 @@ One (see *Status* in the README).
   redirect; sessions with expiry; per-address lockout; Origin checks; CSP and security
   headers; audit log.
 - Panel page with Setup (installs the USB gadget), new code, kick, source.
-- Settings file at `~/.config/flipper-kvm/config.toml`.
-
-Found in the pre-release review and fixed before tagging:
-
-- Closing the app now lets go of every key and mouse button on the target first.
-- A capture device that is present but fails to open or stream shows *Capture error*
-  (panel, toolbar and picture) and is retried every 2 s, instead of retrying silently
-  with a stale status.
-- When the HTTPS port cannot be bound, the panel says so instead of the app quitting.
-- Paste: Escape no longer types the text after an earlier *Type it*.
-- A mouse drag released outside the picture now releases the button on the target.
-- The TLS private key is created with mode 0600 (no world-readable window).
-- Uploads: two uploads of one name can no longer write into the same file, and `.part`
-  leftovers from interrupted uploads are removed at start.
-- `port = 0` and out-of-range `max_image_mib` in the settings file are corrected.
+- Settings file at ~/.config/flipper-kvm/config.toml.
+- Found in the pre-release review and fixed before tagging: closing the app lets go of
+  every key and mouse button on the target; a capture device that is present but fails
+  shows *Capture error* and is retried every 2 s; a port that cannot be bound is shown
+  on the panel instead of the app quitting; Paste no longer types after Escape; a mouse
+  drag released outside the picture releases the button; the TLS key is created with
+  mode 0600; duplicate and interrupted uploads are handled; port 0 and out-of-range
+  image limits in the settings file are corrected.

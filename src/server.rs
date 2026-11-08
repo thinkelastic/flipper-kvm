@@ -79,6 +79,8 @@ pub fn router(shared: Arc<Shared>) -> Router {
         .route("/api/settings", post(settings))
         .route("/api/source", post(source))
         .route("/api/audit", get(audit))
+        .route("/api/sessions", get(sessions))
+        .route("/api/sessions/kick", post(kick_session))
         .route("/stream", get(stream))
         .route("/ws", get(input_ws))
         .route("/ws/video", get(video_ws))
@@ -208,7 +210,7 @@ fn size_text((w, h): (u32, u32)) -> String {
 }
 
 async fn state(State(app): App, headers: HeaderMap) -> Response {
-    require!(app, headers);
+    let token = require!(app, headers);
     let video = app.video.lock().unwrap().clone();
     let settings = app.settings.lock().unwrap().clone();
     let hid = app.hid.lock().unwrap().clone();
@@ -235,8 +237,39 @@ async fn state(State(app): App, headers: HeaderMap) -> Response {
         "layout": app.config.layout,
         "layouts": crate::keymap::LAYOUTS,
         "fingerprint": *app.fingerprint.lock().unwrap(),
+        "session": {"expires_in": app.session_left(&token)},
+        "version": env!("CARGO_PKG_VERSION"),
     }))
     .into_response()
+}
+
+async fn sessions(State(app): App, headers: HeaderMap) -> Response {
+    let token = require!(app, headers);
+    let list: Vec<_> = app
+        .sessions(&token)
+        .into_iter()
+        .map(|s| json!({"id": s.id, "addr": s.addr.to_string(), "age_secs": s.age_secs, "open": s.open, "me": s.me}))
+        .collect();
+    Json(json!({"sessions": list})).into_response()
+}
+
+#[derive(Deserialize)]
+struct KickBody {
+    /// A session's public id, or "all".
+    id: String,
+}
+
+async fn kick_session(State(app): App, headers: HeaderMap, Json(body): Json<KickBody>) -> Response {
+    require!(app, headers);
+    if body.id == "all" {
+        app.kick_all();
+        return Json(json!({"ok": true})).into_response();
+    }
+    if app.kick(&body.id) {
+        Json(json!({"ok": true})).into_response()
+    } else {
+        error(StatusCode::NOT_FOUND, "no such session")
+    }
 }
 
 #[derive(Deserialize)]
@@ -681,6 +714,27 @@ mod tests {
         let state = body_json(res).await;
         assert_eq!(state["source"], "auto");
         assert_eq!(state["layouts"][0], "us");
+        assert!(state["session"]["expires_in"].as_u64().unwrap() > 11 * 3600);
+
+        // This browser is in the session list, by a public id, and can kick itself out.
+        let res = app.clone().oneshot(request("GET", "/api/sessions", "", &[("cookie", &token_cookie)])).await.unwrap();
+        let list = body_json(res).await;
+        assert_eq!(list["sessions"][0]["me"], true);
+        let id = list["sessions"][0]["id"].as_str().unwrap().to_string();
+        assert!(!token_cookie.contains(&id));
+        let res = app
+            .clone()
+            .oneshot(request(
+                "POST",
+                "/api/sessions/kick",
+                &format!(r#"{{"id":"{id}"}}"#),
+                &[("content-type", "application/json"), ("origin", "https://10.0.0.5:8443"), ("cookie", &token_cookie)],
+            ))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+        let res = app.clone().oneshot(request("GET", "/api/state", "", &[("cookie", &token_cookie)])).await.unwrap();
+        assert_eq!(res.status(), StatusCode::UNAUTHORIZED);
     }
 
     #[tokio::test]

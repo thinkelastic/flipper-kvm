@@ -1,5 +1,20 @@
 # Changelog
 
+v0.2:
+A new web client (2026-11-08). The picture fills the page under one slim status bar;
+a floating dock holds the held modifiers, Keys, Paste, Drive, Settings, Release and
+Full screen; the drive and the settings open as sheets beside the picture; frame rate,
+bandwidth and latency sit in a corner of the picture; a *No signal* overlay offers to
+wake the computer or switch to the demo screen. On a phone the dock is a bottom bar.
+
+- Settings › Security lists every paired browser and can kick one (or all); the status
+  bar shows when the session ends.
+- A release shortcut hands the keyboard back to the browser: Ctrl+Alt+R, Right Ctrl
+  twice, or none (Settings › Input). Keyboard lock in full screen can be turned off.
+- Dropping a file on the picture uploads it to the virtual drive; uploads show speed and
+  time left and can be cancelled.
+- Keys gains F2, F12 and Ctrl+Shift+Esc.
+
 v0.1.1:
 Fixes pairing from browsers (2026-11-07). Browsers speak HTTP/2, which carries the host
 as :authority and sends no Host header, so the Origin check refused every pairing POST

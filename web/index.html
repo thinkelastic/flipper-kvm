@@ -10,140 +10,258 @@
 </head>
 <body>
 
+<!-- Pairing -->
 <section id="pair" hidden>
-  <div class="card">
-    <img src="/icon.svg" alt="" width="48" height="48">
-    <h1>Flipper One KVM</h1>
-    <p>Enter the code shown on the Flipper's screen.</p>
-    <form id="pairform">
-      <input id="code" inputmode="numeric" autocomplete="one-time-code" maxlength="7"
-             placeholder="123 456" aria-label="Pairing code" autofocus>
-      <button type="submit">Connect</button>
-    </form>
-    <p id="pairerr" class="err" role="alert"></p>
-    <p class="note">Each code works once. Press <b>Code</b> on the Flipper for a new one.
-      To check this connection, compare the certificate's SHA-256 fingerprint in your browser
-      with the one at the bottom of the Flipper's screen.</p>
-  </div>
+  <header class="pairbar">
+    <span class="brand"><img src="/icon.svg" alt="" width="22" height="22">Flipper One KVM</span>
+    <span id="pairhost" class="mono dim"></span>
+  </header>
+  <main class="pairmain">
+    <section class="lcdside" aria-label="What the Flipper shows">
+      <div class="eyebrow">On the Flipper's screen</div>
+      <div class="lcd" aria-hidden="true">
+        <div class="lcdrows">
+          <div class="lcdrow b"><span>Code</span><span class="lcdcode">··· ···</span></div>
+          <div class="lcdrow"><span>https://</span><span id="lcdhost"></span></div>
+          <hr>
+          <div class="lcdrow"><span>Video</span><span>1920x1080 MJPEG</span></div>
+          <div class="lcdrow"><span>Keyboard</span><span>USB ready</span></div>
+          <div class="lcdrow"><span>Drive</span><span>Empty</span></div>
+          <div class="lcdrow"><span>Browsers</span><span>None</span></div>
+        </div>
+        <div class="lcdkeys"><span>Close</span><span>Code</span><span>Kick</span><span class="blank"></span><span>Demo</span></div>
+      </div>
+      <p class="note">The six digits at the top right. Each code works once: press <b>Code</b> on the Flipper for a new one, <b>Kick</b> to end every session.</p>
+    </section>
+
+    <section class="card" aria-label="Enter the code">
+      <h1>Enter the code</h1>
+      <p class="dim">Six digits, shown on the Flipper right now.</p>
+      <form id="pairform">
+        <label for="code" class="sr">Pairing code</label>
+        <input id="code" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="123 456" autofocus>
+        <button type="submit" class="primary big">Connect</button>
+        <p id="pairerr" class="err" role="alert"></p>
+      </form>
+      <details class="verify">
+        <summary>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"></path><path d="M9 12l2 2 4-4"></path></svg>
+          Make sure this is your Flipper <span class="dim small">optional, once per browser</span>
+        </summary>
+        <p class="dim small">The KVM made its own certificate, so your browser cannot vouch for it. Open the certificate from the lock icon in the address bar and compare its SHA-256 fingerprint with the bottom of the Flipper's screen; the first four groups are enough.</p>
+      </details>
+    </section>
+  </main>
+  <footer class="pairfoot">HTTPS · a session ends on Disconnect, on Kick, or after a set time</footer>
 </section>
 
+<!-- The KVM -->
 <section id="kvm" hidden>
-  <header>
-    <span class="brand"><img src="/icon.svg" alt="" width="20" height="20">KVM</span>
-    <span id="video" class="chip" title="Video"></span>
-    <span id="hid" class="chip" title="USB keyboard and mouse"></span>
-    <span id="link" class="chip" title="Input connection"></span>
-    <span id="stats" class="chip" title="Frames per second, bandwidth, latency"></span>
-    <nav>
-      <details class="menu" id="keysmenu">
-        <summary title="Key combinations">Keys</summary>
-        <div class="menu-items">
-          <button data-combo="ControlLeft AltLeft Delete">Ctrl+Alt+Del</button>
-          <button data-combo="AltLeft Tab">Alt+Tab</button>
-          <button data-combo="AltLeft F4">Alt+F4</button>
-          <button data-combo="MetaLeft">Win / Cmd</button>
-          <button data-combo="MetaLeft KeyR">Win+R</button>
-          <button data-combo="MetaLeft Space">Cmd+Space</button>
-          <button data-combo="MetaLeft Tab">Cmd+Tab</button>
-          <button data-combo="Escape">Esc</button>
-          <button data-combo="PrintScreen">Print Screen</button>
-          <button data-combo="F11">F11</button>
-          <button data-combo="F12">F12</button>
-          <button data-combo="ControlLeft AltLeft F1">Ctrl+Alt+F1</button>
-          <button data-combo="ControlLeft AltLeft F2">Ctrl+Alt+F2</button>
-          <button data-combo="ControlLeft AltLeft F7">Ctrl+Alt+F7</button>
-        </div>
-      </details>
-      <span class="group" role="group" aria-label="Held modifiers">
-        <button class="toggle" data-mod="ControlLeft" aria-pressed="false" title="Hold Ctrl">Ctrl</button>
-        <button class="toggle" data-mod="AltLeft" aria-pressed="false" title="Hold Alt">Alt</button>
-        <button class="toggle" data-mod="ShiftLeft" aria-pressed="false" title="Hold Shift">Shift</button>
-        <button class="toggle" data-mod="MetaLeft" aria-pressed="false" title="Hold Win / Cmd">Win</button>
-      </span>
-      <button id="paste" title="Type text on the remote computer">Paste</button>
-      <button id="drive" title="Virtual USB drive">Drive</button>
-      <button id="settings" title="Video, connection and activity">Settings</button>
-      <button id="kbdbtn" class="touch-only" title="Show the on-screen keyboard">Keyboard</button>
-      <button id="release" title="Let go of every key and button">Release</button>
-      <button id="full" title="Full screen, with keyboard lock where the browser allows it">Full screen</button>
-      <button id="logout" title="End this session">Disconnect</button>
-    </nav>
+  <header class="bar">
+    <span class="brand"><img src="/icon.svg" alt="" width="22" height="22"><span class="t">KVM</span></span>
+    <span class="sep"></span>
+    <span class="device"><span id="devdot" class="dot"></span><span id="devhost" class="mono"></span></span>
+    <div class="pills">
+      <span id="video" class="chip" title="Video"></span>
+      <span id="hid" class="chip" title="USB keyboard, mouse and drive"></span>
+      <span id="link" class="chip" title="Input connection"></span>
+      <span id="control" class="chip accent" hidden>You are controlling</span>
+    </div>
+    <span id="expires" class="dim small"></span>
+    <button id="logout" title="End this session" aria-label="Disconnect"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 17l5-5-5-5M15 12H3M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"></path></svg><span>Disconnect</span></button>
   </header>
-  <div id="stage" tabindex="0" aria-label="Remote screen. Click to control.">
-    <canvas id="screen" width="1280" height="720"></canvas>
-    <img id="mjpeg" alt="Remote screen" draggable="false" hidden>
-    <div id="hint">Click the screen to control it. Keys and the mouse then go to the remote computer.</div>
-    <input id="kbd" aria-label="On-screen keyboard input" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
-  </div>
+
+  <main id="stagewrap">
+    <div id="stage" tabindex="0" aria-label="Remote screen. Click to control.">
+      <canvas id="screen" width="1280" height="720"></canvas>
+      <img id="mjpeg" alt="Remote screen" draggable="false" hidden>
+      <div id="ctlhint" class="glass corner tl" hidden>Keys and mouse go to the computer · <span id="ctlkeys"><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>R</kbd></span> to let go</div>
+      <div id="hud" class="glass corner br" hidden><svg width="56" height="18" viewBox="0 0 56 18" aria-hidden="true"><polyline id="sparkline" points="" fill="none" stroke="#3DDC84" stroke-width="1.6" stroke-linejoin="round"></polyline></svg><span id="stats"></span></div>
+      <div id="nosignal" class="overlay" hidden>
+        <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"></rect><path d="M8 20h8M12 16v4M3 3l18 18"></path></svg>
+        <h2>No signal</h2>
+        <p id="nosigwhy" class="dim"></p>
+        <div class="row">
+          <button id="wake" type="button">Send a key to wake it</button>
+          <button id="todemo" type="button">Switch to the demo screen</button>
+        </div>
+      </div>
+      <div id="hint" class="hintpill">Click the screen to control it. Keys and the mouse then go to the remote computer.</div>
+      <input id="kbd" aria-label="On-screen keyboard input" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+    </div>
+
+    <div id="keyspop" class="pop" hidden>
+      <div class="pophead"><span class="eyebrow">Key combinations</span><span class="dim small">Sent as one press</span></div>
+      <div class="popgrid">
+        <button type="button" data-combo="ControlLeft AltLeft Delete">Ctrl+Alt+Del</button>
+        <button type="button" data-combo="AltLeft Tab">Alt+Tab</button>
+        <button type="button" data-combo="AltLeft F4">Alt+F4</button>
+        <button type="button" data-combo="Escape">Esc</button>
+        <button type="button" data-combo="MetaLeft">Win / Cmd</button>
+        <button type="button" data-combo="MetaLeft KeyR">Win+R</button>
+        <button type="button" data-combo="MetaLeft Space">Cmd+Space</button>
+        <button type="button" data-combo="MetaLeft Tab">Cmd+Tab</button>
+        <button type="button" data-combo="PrintScreen">Print Screen</button>
+        <button type="button" data-combo="F2">F2 (setup)</button>
+        <button type="button" data-combo="F12">F12 (boot menu)</button>
+        <button type="button" data-combo="F11">F11</button>
+        <button type="button" data-combo="ControlLeft AltLeft F1">Ctrl+Alt+F1</button>
+        <button type="button" data-combo="ControlLeft AltLeft F2">Ctrl+Alt+F2</button>
+        <button type="button" data-combo="ControlLeft AltLeft F7">Ctrl+Alt+F7</button>
+        <button type="button" data-combo="ControlLeft ShiftLeft Escape">Ctrl+Shift+Esc</button>
+      </div>
+    </div>
+
+    <nav id="dock" aria-label="Tools">
+      <span class="mods" role="group" aria-label="Held modifiers">
+        <button type="button" class="toggle" data-mod="ControlLeft" aria-pressed="false" title="Hold Ctrl">Ctrl</button>
+        <button type="button" class="toggle" data-mod="AltLeft" aria-pressed="false" title="Hold Alt">Alt</button>
+        <button type="button" class="toggle" data-mod="ShiftLeft" aria-pressed="false" title="Hold Shift">Shift</button>
+        <button type="button" class="toggle" data-mod="MetaLeft" aria-pressed="false" title="Hold Win / Cmd">Win</button>
+      </span>
+      <span class="tools">
+        <button type="button" id="kbdbtn" class="tool touch-only" title="Show the on-screen keyboard">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"></rect><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M6 14h.01M10 14h4M18 14h.01"></path></svg>Keyboard
+        </button>
+        <button type="button" id="keysbtn" class="tool" aria-expanded="false" aria-controls="keyspop" title="Key combinations">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h16M4 12h16M4 16h16"></path><circle cx="8" cy="8" r="1.4" fill="currentColor" stroke="none"></circle><circle cx="14" cy="12" r="1.4" fill="currentColor" stroke="none"></circle><circle cx="10" cy="16" r="1.4" fill="currentColor" stroke="none"></circle></svg>Keys
+        </button>
+        <button type="button" id="paste" class="tool" title="Type text on the remote computer">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="2" width="8" height="4" rx="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2M9 12h6M9 16h6"></path></svg>Paste
+        </button>
+        <button type="button" id="drive" class="tool" aria-expanded="false" aria-controls="drivesheet" title="Virtual USB drive">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="2.5"></circle></svg>Drive
+        </button>
+        <button type="button" id="settings" class="tool" aria-expanded="false" aria-controls="settingssheet" title="Video, input, security and activity">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h2M10 12h10M4 18h12M20 18h0"></path><circle cx="16" cy="6" r="2"></circle><circle cx="8" cy="12" r="2"></circle><circle cx="18" cy="18" r="2"></circle></svg>Settings
+        </button>
+        <span class="sep"></span>
+        <button type="button" id="release" class="tool" title="Let go of every key and button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 11V6a2 2 0 0 0-4 0v5M14 10V4a2 2 0 0 0-4 0v6M10 10.5V6a2 2 0 0 0-4 0v8M18 8a2 2 0 0 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.9-2.3l-3.2-3.6a2 2 0 0 1 2.9-2.7L8 15"></path></svg>Release
+        </button>
+        <button type="button" id="full" class="tool" title="Full screen, with keyboard lock where the browser allows it">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"></path></svg>Full screen
+        </button>
+      </span>
+    </nav>
+  </main>
+
+  <!-- Virtual drive -->
+  <aside id="drivesheet" class="sheet" aria-label="Virtual drive" hidden>
+    <div class="sheethead">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FF8200" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="2.5"></circle></svg>
+      <h2>Virtual drive</h2>
+      <span id="drivefree" class="dim small"></span>
+      <button type="button" class="close" data-close="drivesheet" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+    </div>
+    <div class="sheetbody">
+      <div id="drivestatus"></div>
+      <div class="sechead"><span class="eyebrow">Images on the Flipper</span><span id="drivecount" class="dim small"></span></div>
+      <ul id="images" class="images"></ul>
+      <p id="driveempty" class="note" hidden>No images yet. Upload an ISO or a disk image, or create a blank disk.</p>
+      <div id="upcard" class="upcard" hidden>
+        <div class="row">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"></path></svg>
+          <span id="upname" class="grow ell"></span>
+          <span id="upbytes" class="mono small dim"></span>
+          <button type="button" id="upcancel" class="iconbtn" aria-label="Cancel upload"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+        </div>
+        <progress id="upprog" max="1" value="0"></progress>
+        <div class="row small dim"><span id="upmsg"></span><span id="upeta"></span></div>
+      </div>
+      <div class="addgrid">
+        <label class="dropzone">
+          <input id="upfile" type="file" class="sr">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"></path></svg>
+          <span>Upload an ISO or image</span>
+          <span class="dim small">or drop it on the screen</span>
+        </label>
+        <form id="newform" class="newdisk">
+          <span class="b">New blank disk</span>
+          <div class="row">
+            <label for="newname" class="sr">File name</label>
+            <input id="newname" value="disk.img" maxlength="128">
+            <label for="newsize" class="sr">Size in GiB</label>
+            <input id="newsize" type="number" min="1" value="8">
+            <span class="dim small">GiB</span>
+          </div>
+          <button type="submit" id="newbtn">Create</button>
+        </form>
+      </div>
+      <p id="driveerr" class="err" role="alert"></p>
+    </div>
+    <div class="sheetfoot">
+      <div class="meter"><span id="spaceused"></span></div>
+      <div class="row small dim"><span id="spacetext"></span><span id="spacemax"></span></div>
+    </div>
+  </aside>
+
+  <!-- Settings -->
+  <aside id="settingssheet" class="sheet wide" aria-label="Settings" hidden>
+    <div class="sheethead">
+      <h2>Settings</h2>
+      <button type="button" class="close" data-close="settingssheet" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+    </div>
+    <nav class="subnav" aria-label="Sections"><a href="#s-video">Video</a><a href="#s-input">Input</a><a href="#s-security">Security</a><a href="#s-activity">Activity</a></nav>
+    <div class="sheetbody">
+      <section id="s-video">
+        <h3 class="eyebrow">Video</h3>
+        <div class="setting"><span>Source</span>
+          <span class="seg" role="group" aria-label="Source">
+            <button type="button" data-source="auto" aria-pressed="true">Capture device</button>
+            <button type="button" data-source="demo" aria-pressed="false">Demo screen</button>
+          </span>
+        </div>
+        <label class="setting">Capture size<select id="size"></select></label>
+        <label class="setting col"><span class="row"><span>Frame rate</span><output id="fpsval" class="mono small dim"></output></span><input id="fps" type="range" min="1" max="60"></label>
+        <label class="setting col"><span class="row"><span>Quality when the Flipper encodes</span><output id="qval" class="mono small dim"></output></span><input id="quality" type="range" min="30" max="95"><span class="dim small">YUYV capture and the demo screen. MJPEG from a dongle passes through as it comes.</span></label>
+        <div class="setting"><span>Transport</span>
+          <span class="seg" role="group" aria-label="Transport">
+            <button type="button" data-transport="ws" aria-pressed="true">WebSocket</button>
+            <button type="button" data-transport="mjpeg" aria-pressed="false">MJPEG stream</button>
+          </span>
+        </div>
+        <div class="metrics">
+          <div><span class="small dim">frames</span><b id="m-fps">–</b></div>
+          <div><span class="small dim">bandwidth</span><b id="m-mbps">–</b></div>
+          <div><span class="small dim">glass to glass</span><b id="m-lat">–</b></div>
+        </div>
+      </section>
+      <section id="s-input">
+        <h3 class="eyebrow">Input</h3>
+        <label class="setting"><span>Target keyboard layout<br><span class="dim small">Used by Paste and the phone keyboard</span></span><select id="layout"></select></label>
+        <label class="setting"><span>Let go with<br><span class="dim small">Hands the keyboard and mouse back to your browser</span></span>
+          <select id="releasekey">
+            <option value="ctrl-alt-r">Ctrl + Alt + R</option>
+            <option value="rctrl2">Right Ctrl, twice</option>
+            <option value="none">Only Release, or clicking outside</option>
+          </select>
+        </label>
+        <label class="setting"><span>Full screen locks the keyboard<br><span class="dim small">Esc, Alt+Tab and Cmd+W reach the computer (Chrome)</span></span><input id="kblock" type="checkbox" checked></label>
+      </section>
+      <section id="s-security">
+        <h3 class="eyebrow">Security</h3>
+        <div class="setting col"><span>Certificate SHA-256</span><div id="fp" class="fpgrid"></div><span class="dim small">The same groups are at the bottom of the Flipper's screen.</span></div>
+        <div class="setting col"><span class="row"><span>Sessions</span><button type="button" id="kickall" class="danger small">Kick all</button></span><ul id="sessions" class="sessions"></ul></div>
+      </section>
+      <section id="s-activity">
+        <h3 class="eyebrow">Activity</h3>
+        <pre id="audit"></pre>
+        <p id="version" class="dim small"></p>
+      </section>
+    </div>
+  </aside>
 
   <dialog id="pastedlg">
     <form method="dialog">
       <h2>Type text on the remote computer</h2>
       <textarea id="pastetext" rows="8" maxlength="20000"></textarea>
-      <label class="row">Remote keyboard layout
-        <select id="layout"></select>
-      </label>
-      <p class="note">Typed one key at a time. Characters the layout lacks are skipped.
-        Any key, or Release, stops it.</p>
+      <label class="setting">Remote keyboard layout<select id="pastelayout"></select></label>
+      <p class="note">Typed one key at a time. Characters the layout lacks are skipped. Any key, or Release, stops it.</p>
       <menu>
         <button value="cancel">Cancel</button>
         <button value="ok" class="primary">Type it</button>
       </menu>
-    </form>
-  </dialog>
-
-  <dialog id="drivedlg">
-    <form method="dialog">
-      <h2>Virtual USB drive</h2>
-      <p id="drivestatus" class="status"></p>
-      <table id="images">
-        <thead><tr><th>Image</th><th>Size</th><th></th></tr></thead>
-        <tbody></tbody>
-      </table>
-      <p id="driveempty" class="note" hidden>No images yet. Upload an ISO or a disk image, or create a blank disk.</p>
-      <fieldset>
-        <legend>Upload an image</legend>
-        <input type="file" id="upfile">
-        <button type="button" id="upbtn">Upload</button>
-        <progress id="upprog" max="1" value="0" hidden></progress>
-        <span id="upmsg" class="note"></span>
-      </fieldset>
-      <fieldset>
-        <legend>New blank disk</legend>
-        <input id="newname" placeholder="disk.img" maxlength="128" aria-label="File name">
-        <input id="newsize" type="number" min="1" value="1024" aria-label="Size in MiB"> MiB
-        <button type="button" id="newbtn">Create</button>
-      </fieldset>
-      <p id="drivefree" class="note"></p>
-      <p id="driveerr" class="err" role="alert"></p>
-      <menu><button value="close">Close</button></menu>
-    </form>
-  </dialog>
-
-  <dialog id="settingsdlg">
-    <form method="dialog">
-      <h2>Settings</h2>
-      <label class="row">Source
-        <select id="source"><option value="auto">Capture device</option><option value="demo">Demo screen</option></select>
-      </label>
-      <label class="row">Resolution
-        <select id="size"></select>
-      </label>
-      <label class="row">Frames per second <output id="fpsval"></output>
-        <input id="fps" type="range" min="1" max="60">
-      </label>
-      <label class="row">Quality <output id="qval"></output>
-        <input id="quality" type="range" min="30" max="95">
-      </label>
-      <p class="note">Quality applies to frames the Flipper encodes (YUYV capture, demo). MJPEG from a dongle is sent as it comes.</p>
-      <label class="row">Video over
-        <select id="transport"><option value="ws">WebSocket (lowest latency)</option><option value="mjpeg">MJPEG stream (compatibility)</option></select>
-      </label>
-      <h3>Certificate SHA-256</h3>
-      <p id="fp" class="mono"></p>
-      <h3>Activity</h3>
-      <pre id="audit"></pre>
-      <menu><button value="close">Close</button></menu>
     </form>
   </dialog>
 </section>

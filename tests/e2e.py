@@ -204,7 +204,12 @@ ws_send(s, json.dumps({"t": "mouse", "x": 0.5, "y": 0.5, "b": 0}))
 ws_send(s, json.dumps({"t": "release"}))
 s.close()
 
-# 11. Audit and logout.
+# 11. Sessions, audit and logout.
+r, d = req("GET", "/api/sessions")
+mine = [s for s in d.get("sessions", []) if s.get("me")]
+check("this session is listed with a public id", r.status == 200 and len(mine) == 1 and mine[0]["id"] not in cookie, str(d)[:120])
+r, d = req("POST", "/api/sessions/kick", {"id": "nope"})
+check("kicking an unknown session is a 404", r.status == 404)
 r, d = req("GET", "/api/audit")
 check("audit log has the pairing", r.status == 200 and any("paired" in l for l in d["lines"]))
 req("POST", "/api/logout", {})

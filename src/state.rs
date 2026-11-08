@@ -97,11 +97,27 @@ pub enum Setup {
 
 #[derive(Clone, Debug)]
 pub struct Session {
+    /// A public name for the session, so a browser can point at another one (to kick
+    /// it) without ever seeing its token.
+    pub id: String,
     pub created: Instant,
     pub last_seen: Instant,
     pub addr: IpAddr,
     /// Open connections (input, video); a session with one open does not go idle.
     pub open: usize,
+}
+
+/// A session as the web page lists it.
+#[derive(Clone, Debug, PartialEq)]
+pub struct SessionInfo {
+    pub id: String,
+    pub addr: IpAddr,
+    /// Seconds since pairing.
+    pub age_secs: u64,
+    /// Open connections: 0 is a browser that paired but shows nothing now.
+    pub open: usize,
+    /// The session asking.
+    pub me: bool,
 }
 
 #[derive(Debug, PartialEq)]
@@ -205,7 +221,7 @@ impl Shared {
         let ok = constant_time_eq(attempt.as_bytes(), self.code.lock().unwrap().as_bytes());
         if ok {
             let token = token();
-            let session = Session { created: now, last_seen: now, addr, open: 0 };
+            let session = Session { id: short_id(), created: now, last_seen: now, addr, open: 0 };
             self.sessions.lock().unwrap().insert(token.clone(), session);
             self.by_addr.lock().unwrap().remove(&addr);
             *self.last_addr.lock().unwrap() = Some(addr);
@@ -276,6 +292,48 @@ impl Shared {
         self.changed();
     }
 
+    /// Seconds until the session `token` ends by age, whatever it does.
+    pub fn session_left(&self, token: &str) -> Option<u64> {
+        let max_age = Duration::from_secs(self.config.session_hours * 3600);
+        let s = self.sessions.lock().unwrap();
+        s.get(token).map(|s| max_age.saturating_sub(s.created.elapsed()).as_secs())
+    }
+
+    /// Every live session, newest first, with `me` on the one holding `token`.
+    pub fn sessions(&self, token: &str) -> Vec<SessionInfo> {
+        let mut list: Vec<(Instant, SessionInfo)> = self
+            .sessions
+            .lock()
+            .unwrap()
+            .iter()
+            .map(|(t, s)| {
+                let info =
+                    SessionInfo { id: s.id.clone(), addr: s.addr, age_secs: s.created.elapsed().as_secs(), open: s.open, me: t == token };
+                (s.created, info)
+            })
+            .collect();
+        list.sort_by_key(|a| std::cmp::Reverse(a.0));
+        list.into_iter().map(|(_, info)| info).collect()
+    }
+
+    /// End the session with this public id. Its open connections notice on their next
+    /// message or frame. False if there is no such session.
+    pub fn kick(&self, id: &str) -> bool {
+        let removed = {
+            let mut s = self.sessions.lock().unwrap();
+            let token = s.iter().find(|(_, s)| s.id == id).map(|(t, _)| t.clone());
+            token.and_then(|t| s.remove(&t))
+        };
+        match removed {
+            Some(s) => {
+                self.audit.log(format!("kicked {}", s.addr));
+                self.changed();
+                true
+            }
+            None => false,
+        }
+    }
+
     /// Forget every session. Open connections notice on their next message or frame.
     pub fn kick_all(&self) {
         let n = {
@@ -299,6 +357,11 @@ fn new_code() -> String {
 
 fn token() -> String {
     let bytes: [u8; 24] = rand::random();
+    bytes.iter().map(|b| format!("{b:02x}")).collect()
+}
+
+fn short_id() -> String {
+    let bytes: [u8; 6] = rand::random();
     bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
 
@@ -380,6 +443,23 @@ mod tests {
         let t = s.pair(&s.code(), ip(1)).unwrap();
         s.kick_all();
         assert!(!s.authorized(&t));
+    }
+
+    #[test]
+    fn sessions_are_listed_and_kicked_by_their_public_id() {
+        let (s, _rx) = test_shared();
+        let mine = s.pair(&s.code(), ip(1)).unwrap();
+        let other = s.pair(&s.code(), ip(2)).unwrap();
+        s.connection(&other, 1);
+        let list = s.sessions(&mine);
+        assert_eq!(list.len(), 2);
+        let me = list.iter().find(|i| i.me).expect("mine is marked");
+        let them = list.iter().find(|i| !i.me).unwrap();
+        assert_eq!((me.addr, them.addr, them.open), (ip(1), ip(2), 1));
+        assert!(!list.iter().any(|i| i.id == mine || i.id == other), "tokens never appear");
+        assert!(s.kick(&them.id));
+        assert!(!s.authorized(&other) && s.authorized(&mine));
+        assert!(!s.kick(&them.id), "gone already");
     }
 
     #[test]

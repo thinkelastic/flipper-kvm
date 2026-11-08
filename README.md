@@ -31,6 +31,8 @@ or no working OS yet (BIOS, installers, a crashed system).
   create blank disks; download images back.
 - **Phones and tablets**: tap to click, long-press to right-click, two fingers to
   scroll, and the phone's own keyboard.
+- **Sessions**: see every paired browser and kick one from the page; a release shortcut
+  (Ctrl+Alt+R, or Right Ctrl twice) hands the keyboard back to your browser.
 - **The Flipper's screen** shows the pairing code, the address, what is connected and the
   certificate fingerprint. **Setup** installs the USB side from the panel.
 
@@ -76,7 +78,9 @@ Without sudo, run `sudo gadget/install.sh` from this repository on the Flipper i
    browser with the one at the bottom of the Flipper's screen (scroll down), then accept.
 4. Enter the code. Each code works once; press **Code** for a new one.
 5. Click the picture to control the computer (the orange outline means your keys and
-   mouse go to it). Click outside, or press *Release*, to let go.
+   mouse go to it). Press Ctrl+Alt+R, click outside, or press *Release* to let go.
+   The dock at the bottom has the held modifiers, key combinations, Paste, the virtual
+   drive, Settings and full screen; drop an ISO on the picture to upload it.
 
 Panel keys: **Close**, **Code** (new code), **Kick** (end every session), **Setup**
 (when the USB side is missing), **Demo/Auto** (picture source).
@@ -109,7 +113,8 @@ Images live in `~/.local/share/flipper-kvm/images/`, with the certificate and
 - Pairing needs the code on the Flipper's screen: six digits, single use, replaced after
   5 wrong tries, a delay on every wrong try, and a lockout per address.
 - Sessions are `HttpOnly`, `Secure`, `SameSite=Strict` cookies held in memory: closing
-  the app ends them all, as does **Kick**. They also expire (see Settings).
+  the app ends them all, as does **Kick** on the panel; the page's Settings › Security
+  lists them and kicks one. They also expire (see Settings).
 - Every state-changing request and both websockets must come from the KVM's own page
   (Origin checked); a strict Content-Security-Policy and the usual security headers are
   sent; the page cannot be framed.

@@ -19,7 +19,9 @@ the same as for remote administration tools.
   carry this server's Origin; cookies are `SameSite=Strict`; a strict CSP and
   `frame-ancestors 'none'` stop injection and framing.
 - *Forgotten sessions*: sessions expire (`session_hours`, `idle_minutes`), end when the app
-  closes, and **Kick** on the panel ends them all at once.
+  closes, and **Kick** on the panel ends them all at once. A paired browser sees the
+  other sessions (address and age, never their tokens) under Settings › Security and
+  can end one or all of them.
 - *Path tricks* on the drive API: image names are plain file names only (no `/`, no
   leading dot, a fixed character set).
 

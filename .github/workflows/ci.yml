@@ -20,7 +20,7 @@ jobs:
   build:
     runs-on: ubuntu-24.04-arm
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           path: flipper-kvm
 
@@ -34,7 +34,7 @@ jobs:
         with:
           components: clippy, rustfmt
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/registry
@@ -71,7 +71,7 @@ jobs:
         working-directory: flipctl-slint
         run: tools/appimage/build.sh --native apps/flipper-kvm
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: flipper-kvm-aarch64
           path: |
@@ -85,7 +85,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: flipper-kvm-aarch64
       - name: Release

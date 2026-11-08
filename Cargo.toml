@@ -6,6 +6,7 @@ version = "0.1.0"
 edition = "2021"
 license = "MIT"
 readme = "README.md"
+repository = "https://github.com/thinkelastic/flipper-kvm"
 publish = false
 description = "KVM over IP for Flipper One: capture a computer's screen, drive its keyboard and mouse over USB, from a browser"
 

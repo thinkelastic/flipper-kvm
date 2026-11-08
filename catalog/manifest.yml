@@ -1,0 +1,60 @@
+# Apps Catalog manifest for Flipper One KVM, in the format of Flipper's
+# flipper-application-catalog (documentation/Manifest.md there). Flipper One's catalogue
+# is flipctl-apps' apps.toml today (docs/DEVELOPING.md says how that entry is made); this
+# file is kept ready for a manifest-based catalogue like Flipper Zero's, and the fields
+# Zero takes from application.fam (name, id, category, version, author, icon) are given
+# here because app.toml has no place for them.
+#
+# To submit: copy it to applications/USB/flipper_kvm/manifest.yml in the catalog
+# repository and point commit_sha at the commit being submitted.
+
+name: KVM
+id: flipper_kvm
+category: USB
+version: "0.1"
+author: Alberto (github.com/thinkelastic)
+icon: icon.png
+
+sourcecode:
+  type: git
+  location:
+    origin: https://github.com/thinkelastic/flipper-kvm.git
+    commit_sha: a47e80e20d77ff5ecc206dba7370dc36c28d376d
+
+short_description: Use a computer from your browser through the Flipper. It captures the computer's screen and is its USB keyboard, mouse and drive.
+
+description: |
+  **Flipper One KVM** turns the Flipper into a KVM over IP. A computer's screen comes in
+  through an HDMI-to-USB capture dongle on the Flipper's USB-A port; its keyboard, mouse
+  and a virtual USB drive are the Flipper itself, on USB-C1. Everything is served over
+  HTTPS on your network, so you can reach a machine that has no network, no remote
+  desktop software or no working OS yet: BIOS, installers, a crashed system.
+
+  ## Features
+
+  - Screen from any UVC HDMI capture dongle, low-latency over a WebSocket with live
+    fps, bandwidth and latency; MJPEG fallback.
+  - Keyboard and absolute mouse (a click lands where you clicked), key combinations,
+    sticky Ctrl, Alt, Shift and Win, and Paste text for US, UK, German, French and
+    Spanish targets.
+  - Virtual USB drive: upload an ISO or disk image and insert it as a CD-ROM, a USB
+    stick or a read-only stick; create blank disks.
+  - Phones and tablets: tap, long-press, two-finger scroll, the phone's own keyboard.
+  - Pairing by a single-use code on the Flipper's screen, a certificate fingerprint to
+    check, sessions that expire, and an audit log.
+
+  ## You need
+
+  - A Flipper One on firmware build 2484 or later.
+  - A UVC HDMI-to-USB capture dongle (MS2109/MS2130 sticks work out of the box).
+  - A USB-C cable from USB-C1 to the computer.
+
+  The first time, press _Setup_ on the panel to install the USB side (needs sudo).
+  Full instructions: [README](https://github.com/thinkelastic/flipper-kvm#readme).
+
+changelog: "@CHANGELOG.md"
+
+# Unmodified frames of the panel, 256x144, from flipctl's remote view.
+screenshots:
+  - screenshots/flipper-0.png
+  - screenshots/flipper-1.png

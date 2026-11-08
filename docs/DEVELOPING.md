@@ -68,7 +68,16 @@ libm and libgcc_s:
 
 ### App Manager catalogue
 
-Flipper's App Manager installs from `apps.toml` on the `dev` branch of
+The repository follows Flipper's apps-catalog guideline
+([flipper-application-catalog/documentation/Contributing.md](https://github.com/flipperdevices/flipper-application-catalog/blob/main/documentation/Contributing.md),
+written for Flipper Zero): an open-source license, the source on GitHub, an icon,
+unmodified device screenshots in `screenshots/` (the panel's 256x144 frames, taken from
+flipctl's remote view), a README with usage and hardware, and `CHANGELOG.md` in its
+`vX.Y:` form. `catalog/manifest.yml` is that catalogue's manifest for this app, ready to
+submit (set `commit_sha` to the commit being submitted) should Flipper One take
+manifests the same way.
+
+Today, Flipper's App Manager installs from `apps.toml` on the `dev` branch of
 `flipperdevices/flipctl-apps`, with the files as release assets on its `apps` tag. To
 propose KVM there:
 

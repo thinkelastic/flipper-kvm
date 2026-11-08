@@ -70,6 +70,22 @@ pub fn path_of(name: &str) -> Option<PathBuf> {
     valid_name(name).then(|| images_dir().join(name))
 }
 
+/// Where an upload of `path` is written until it is complete: `<name>.part`.
+pub fn partial_path(path: &Path) -> PathBuf {
+    let mut p = path.as_os_str().to_owned();
+    p.push(".part");
+    PathBuf::from(p)
+}
+
+/// Delete the `.part` files interrupted uploads left behind.
+pub fn remove_partials() {
+    for entry in fs::read_dir(images_dir()).into_iter().flatten().flatten() {
+        if entry.file_name().to_string_lossy().ends_with(".part") {
+            let _ = fs::remove_file(entry.path());
+        }
+    }
+}
+
 pub fn list() -> Vec<Image> {
     let mut images: Vec<Image> = fs::read_dir(images_dir())
         .into_iter()
@@ -81,7 +97,7 @@ pub fn list() -> Vec<Image> {
             (meta.is_file() && valid_name(&name) && !name.ends_with(".part")).then_some(Image { name, size: meta.len() })
         })
         .collect();
-    images.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    images.sort_by_key(|a| a.name.to_lowercase());
     images
 }
 
@@ -110,7 +126,13 @@ pub fn mounted() -> Option<(String, String)> {
     }
     let name = Path::new(file).file_name()?.to_string_lossy().into_owned();
     let read = |a: &str| fs::read_to_string(Path::new(LUN).join(a)).map(|s| s.trim() == "1").unwrap_or(false);
-    let mode = if read("cdrom") { Mode::Cdrom } else if read("ro") { Mode::DiskReadOnly } else { Mode::Disk };
+    let mode = if read("cdrom") {
+        Mode::Cdrom
+    } else if read("ro") {
+        Mode::DiskReadOnly
+    } else {
+        Mode::Disk
+    };
     Some((name, mode.name().to_string()))
 }
 
@@ -119,9 +141,7 @@ pub fn mounted() -> Option<(String, String)> {
 /// EBUSY; the forced eject the kernel offers for that case is used then.
 pub fn eject() -> io::Result<()> {
     match write_attr("file", "") {
-        Err(e) if e.raw_os_error() == Some(libc::EBUSY) && Path::new(LUN).join("forced_eject").exists() => {
-            write_attr("forced_eject", "1")
-        }
+        Err(e) if e.raw_os_error() == Some(libc::EBUSY) && Path::new(LUN).join("forced_eject").exists() => write_attr("forced_eject", "1"),
         other => other,
     }
 }

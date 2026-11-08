@@ -347,9 +347,7 @@ mod tests {
             let mut seen = std::collections::HashMap::new();
             let rows = overrides(layout);
             let mut chars: Vec<char> = rows.iter().flat_map(|r| [r.1, r.2, r.3]).flatten().collect();
-            chars.extend((' '..='~').chain(['\n', '\t']).filter(|&c| {
-                char_key(c).is_some_and(|(u, _)| !rows.iter().any(|r| r.0 == u))
-            }));
+            chars.extend((' '..='~').chain(['\n', '\t']).filter(|&c| char_key(c).is_some_and(|(u, _)| !rows.iter().any(|r| r.0 == u))));
             for c in chars {
                 let key = char_key_in(c, layout).unwrap_or_else(|| panic!("{layout}: {c:?} has no key"));
                 if let Some(other) = seen.insert(c, key) {

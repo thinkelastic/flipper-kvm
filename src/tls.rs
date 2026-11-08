@@ -25,9 +25,12 @@ pub fn certificate(dir: &Path) -> io::Result<(Vec<u8>, Vec<u8>)> {
     let made = rcgen::generate_simple_self_signed(names).map_err(io::Error::other)?;
     std::fs::create_dir_all(dir)?;
     std::fs::write(&cert, made.cert.pem())?;
-    std::fs::write(&key, made.key_pair.serialize_pem())?;
-    use std::os::unix::fs::PermissionsExt;
-    std::fs::set_permissions(&key, std::fs::Permissions::from_mode(0o600))?;
+    // The key is private from the first byte: created with mode 0600, not fixed after.
+    use std::io::Write;
+    use std::os::unix::fs::OpenOptionsExt;
+    let mut f = std::fs::OpenOptions::new().write(true).create(true).truncate(true).mode(0o600).open(&key)?;
+    f.write_all(made.key_pair.serialize_pem().as_bytes())?;
+    drop(f);
     Ok((std::fs::read(&cert)?, std::fs::read(&key)?))
 }
 
@@ -97,9 +100,7 @@ async fn redirect(mut stream: TcpStream, port: u16) {
     }
     let local = stream.local_addr().map(|a| format!("{}:{port}", a.ip())).unwrap_or_default();
     let location = redirect_target(&String::from_utf8_lossy(&buf[..len]), &local);
-    let res = format!(
-        "HTTP/1.1 301 Moved Permanently\r\nLocation: {location}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
-    );
+    let res = format!("HTTP/1.1 301 Moved Permanently\r\nLocation: {location}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
     let _ = stream.write_all(res.as_bytes()).await;
     let _ = stream.shutdown().await;
 }

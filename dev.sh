@@ -4,6 +4,8 @@
 #   ./dev.sh sync       copy the source to ~/src/flipper-kvm on the device
 #   ./dev.sh build      sync, then cargo build --release on the device
 #   ./dev.sh test       sync, then cargo test on the device
+#   ./dev.sh lint       sync, then cargo fmt --check and cargo clippy, as CI runs them
+#   ./dev.sh fmt        sync, cargo fmt on the device, and copy the formatted sources back
 #   ./dev.sh bundle     build the .fap.AppImage with flipctl-slint's bundler (native, on the device)
 #   ./dev.sh run        bundle, install into ~/Apps/Network and open it on the panel
 #   ./dev.sh headless   build and run the server without the panel UI (Ctrl-C stops)
@@ -68,6 +70,13 @@ case "$cmd" in
 	sync) sync ;;
 	build) build ;;
 	test) sync; dev "$ENV cd ~/src/flipper-kvm && cargo test --release $* 2>&1 | grep -vE '^\s+(Compiling|Downloaded|Downloading)'"; pull_lock ;;
+	lint)
+		sync
+		dev "$ENV rustup component add clippy rustfmt 2>/dev/null; cd ~/src/flipper-kvm && cargo fmt --check &&
+		     cargo clippy --release --all-targets -- -D warnings 2>&1 | grep -vE '^\s+(Compiling|Checking|Downloaded|Downloading)'" ;;
+	fmt)
+		sync
+		dev "$ENV rustup component add rustfmt 2>/dev/null; cd ~/src/flipper-kvm && cargo fmt && tar -cf - src build.rs" | tar -xf - -C "$ROOT" ;;
 	bundle) bundle ;;
 	run)
 		bundle
@@ -89,5 +98,5 @@ case "$cmd" in
 		host=$([ "$HOST" = 127.0.0.1 ] && echo localhost || echo "$HOST")
 		python3 -I "$ROOT/tests/e2e.py" --host "$host" --code "${1:?usage: ./dev.sh e2e CODE}" ;;
 	ssh) dev -t "$@" ;;
-	*) sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//' ;;
+	*) sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//' ;;
 esac

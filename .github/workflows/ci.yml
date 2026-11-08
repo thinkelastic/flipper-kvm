@@ -31,6 +31,8 @@ jobs:
             libfontconfig-dev libxkbcommon-dev
 
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
 
       - uses: actions/cache@v4
         with:
@@ -41,12 +43,23 @@ jobs:
             flipctl-slint/target
           key: cargo-${{ runner.arch }}-${{ hashFiles('flipper-kvm/Cargo.lock') }}
 
+      - name: Format
+        working-directory: flipper-kvm
+        run: cargo fmt --check
+
+      - name: Lints
+        working-directory: flipper-kvm
+        run: cargo clippy --release --locked --all-targets -- -D warnings
+
       - name: Tests
         working-directory: flipper-kvm
         run: cargo test --release --locked
 
-      - name: Web page syntax
-        run: node --check flipper-kvm/web/app.js
+      - name: Web page and test script syntax
+        run: |
+          node --check flipper-kvm/web/app.js
+          python3 -m py_compile flipper-kvm/tests/e2e.py
+          bash -n flipper-kvm/gadget/flipper-kvm-gadget.sh flipper-kvm/gadget/install.sh flipper-kvm/dev.sh
 
       - name: flipctl-slint at the firmware's revision
         run: |

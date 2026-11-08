@@ -137,10 +137,10 @@ pub struct Shared {
     /// SHA-256 of the TLS certificate, "AB:CD:...", once the server has it.
     pub fingerprint: Mutex<String>,
     pub setup: Mutex<Setup>,
-    /// The image on the virtual drive and how it is shown, if one is.
-    pub drive: Mutex<Option<(String, String)>>,
     /// Where the most recent browser connected from.
     pub last_addr: Mutex<Option<IpAddr>>,
+    /// Why the web server is not running, if it failed to start.
+    pub server_error: Mutex<Option<String>>,
 }
 
 impl Shared {
@@ -170,8 +170,8 @@ impl Shared {
             audit,
             fingerprint: Mutex::new(String::new()),
             setup: Mutex::new(Setup::Idle),
-            drive: Mutex::new(None),
             last_addr: Mutex::new(None),
+            server_error: Mutex::new(None),
         };
         (Arc::new(shared), rx)
     }
@@ -346,7 +346,11 @@ mod tests {
     }
 
     fn wrong(s: &Shared) -> &'static str {
-        if s.code() == "000000" { "111111" } else { "000000" }
+        if s.code() == "000000" {
+            "111111"
+        } else {
+            "000000"
+        }
     }
 
     #[test]

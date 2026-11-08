@@ -1,0 +1,4 @@
+# Wide lines and compact one-liners, as the code is written; `cargo fmt --check` is run
+# by CI and by ./dev.sh lint.
+max_width = 140
+use_small_heuristics = "Max"

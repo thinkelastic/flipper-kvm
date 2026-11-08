@@ -109,11 +109,16 @@ impl Config {
     }
 
     fn sanitize(mut self) -> Self {
+        if self.port == 0 {
+            self.port = 8443;
+        }
         self.quality = self.quality.clamp(30, 95);
         self.max_fps = self.max_fps.clamp(1, 60);
         self.session_hours = self.session_hours.clamp(1, 24 * 30);
         self.idle_minutes = self.idle_minutes.clamp(1, 24 * 60);
-        self.lockout_after = self.lockout_after.max(3);
+        self.lockout_after = self.lockout_after.clamp(3, 1000);
+        // Up to 1 TiB; keeps `mib * 1024 * 1024` well within u64.
+        self.max_image_mib = self.max_image_mib.clamp(1, 1 << 20);
         if !crate::keymap::LAYOUTS.contains(&self.layout.as_str()) {
             self.layout = "us".into();
         }
@@ -138,8 +143,9 @@ mod tests {
 
     #[test]
     fn out_of_range_values_are_clamped() {
-        let c: Config = toml::from_str("quality = 5\nmax_fps = 500\nlayout = \"klingon\"").unwrap();
+        let c: Config = toml::from_str("quality = 5\nmax_fps = 500\nlayout = \"klingon\"\nport = 0\nmax_image_mib = 0").unwrap();
         let c = c.sanitize();
         assert_eq!((c.quality, c.max_fps, c.layout.as_str()), (30, 60, "us"));
+        assert_eq!((c.port, c.max_image_mib), (8443, 1));
     }
 }

@@ -51,8 +51,13 @@ impl Kvm {
                 rt.block_on(async move {
                     tokio::spawn(hid::Hid::new(net.clone()).run(input));
                     if let Err(e) = server::serve(net.clone()).await {
-                        net.audit.log(format!("server stopped: {e}"));
-                        std::process::exit(1);
+                        // Shown on the panel (and printed headless) rather than quitting:
+                        // the user should see "port in use", not a vanished app.
+                        let why = format!("port {}: {e}", net.config.port);
+                        net.audit.log(format!("server failed: {why}"));
+                        *net.server_error.lock().unwrap() = Some(why);
+                        net.changed();
+                        flipctl_app::redraw();
                     }
                 });
             })
@@ -76,6 +81,10 @@ fn headless(shared: &Shared) -> ! {
         let g = shared.generation.load(Ordering::Relaxed);
         if g != seen {
             seen = g;
+            if let Some(e) = shared.server_error.lock().unwrap().clone() {
+                eprintln!("server failed: {e}");
+                std::process::exit(1);
+            }
             println!(
                 "code {}  web https://{}  video {}  usb {}  clients {}  cert {}",
                 state::spaced(&shared.code()),
@@ -140,11 +149,22 @@ impl App for Kvm {
             ));
             return Page::detail(rows).id("confirm");
         }
+        if let Some(e) = s.server_error.lock().unwrap().clone() {
+            let mut rows = vec![heading("Server failed", "")];
+            rows.extend(wrapped(&e, 34, false));
+            rows.push(rule());
+            rows.extend(wrapped(
+                "Is another KVM running, or the port taken? Change `port` in ~/.config/flipper-kvm/config.toml and open the app again.",
+                34,
+                true,
+            ));
+            return Page::detail(rows).id("failed");
+        }
         let clients = match s.clients.load(Ordering::Relaxed) {
             0 => "None".to_string(),
             n => {
                 let from = s.last_addr.lock().unwrap().map(|a| format!(" ({a})")).unwrap_or_default();
-                if n == 1 { format!("1{from}") } else { format!("{n}{from}") }
+                format!("{n}{from}")
             }
         };
         let drive_row = match drive::mounted() {
@@ -166,7 +186,9 @@ impl App for Kvm {
             Setup::Running => rows.push(text("Setting up USB...")),
             Setup::Done(Ok(())) => rows.push(text("USB set up.")),
             Setup::Done(Err(e)) => rows.extend(wrapped(&format!("Setup failed: {e}"), 34, false)),
-            Setup::Idle if self.needs_setup() => rows.extend(wrapped("Press Setup to install the USB keyboard, mouse and drive.", 34, true)),
+            Setup::Idle if self.needs_setup() => {
+                rows.extend(wrapped("Press Setup to install the USB keyboard, mouse and drive.", 34, true))
+            }
             Setup::Idle => {}
         }
         let fp = s.fingerprint.lock().unwrap().clone();
@@ -238,10 +260,20 @@ impl App for Kvm {
     }
 
     fn tick(&mut self, _: &mut Ui) {
-        // A confirmation not acted on goes away by itself.
+        // "USB set up." goes away once the devices are seen working.
         let mut setup = self.shared.setup.lock().unwrap();
         if matches!(*setup, Setup::Done(Ok(()))) && !self.needs_setup() {
             *setup = Setup::Idle;
+        }
+    }
+
+    /// Closing must not leave a key or a mouse button held on the target: the gadget
+    /// outlives the app and keeps reporting whatever was sent last.
+    fn close(&mut self) {
+        self.shared.audit.log("closed");
+        if self.shared.input.send(hid::Input::Release).is_ok() {
+            // The HID task runs on the server thread; give it a moment to write.
+            std::thread::sleep(Duration::from_millis(150));
         }
     }
 }

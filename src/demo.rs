@@ -86,7 +86,7 @@ impl DemoTarget {
         for (i, line) in lines.iter().enumerate() {
             let tail: String = line.chars().rev().take(70).collect::<Vec<_>>().into_iter().rev().collect();
             c.text(40, y, 2, &tail, TEXT);
-            if i == lines.len() - 1 && (frame / 5) % 2 == 0 {
+            if i == lines.len() - 1 && (frame / 5).is_multiple_of(2) {
                 c.fill(40 + tail.chars().count() * 16, y, 12, 16, ORANGE);
             }
             y += 26;

@@ -32,9 +32,15 @@ const REOPEN_AFTER: Duration = Duration::from_secs(10);
 enum Stop {
     /// The source or the settings changed; pick again now.
     Switch,
-    /// The device failed, went away, or went silent.
+    /// No frames for a while: close and open the device again.
+    Silent,
+    /// The device failed or went away.
     Failed(String),
 }
+
+/// How long to wait before trying a device that just failed, so a broken one does not
+/// spin the thread.
+const RETRY_AFTER: Duration = Duration::from_secs(2);
 
 /// A capture device worth using: one that streams MJPEG or YUYV.
 struct Candidate {
@@ -50,17 +56,32 @@ pub fn spawn(shared: Arc<Shared>) {
 }
 
 fn run(shared: Arc<Shared>) {
+    // Whether the last run of the device ended for want of frames: then it is reopened
+    // with "No signal" still showing, instead of a hopeful "0fps" first.
+    let mut quiet = false;
     loop {
         let source = *shared.source.lock().unwrap();
         let why = match (source, find_device()) {
-            (Source::Auto, Some(dev)) => match capture(&shared, &dev) {
-                Stop::Switch => continue,
+            (Source::Auto, Some(dev)) => match capture(&shared, &dev, quiet) {
+                Stop::Switch => {
+                    quiet = false;
+                    continue;
+                }
+                Stop::Silent => {
+                    eprintln!("video: {} silent, reopening", dev.path.display());
+                    quiet = true;
+                    thread::sleep(Duration::from_millis(500));
+                    continue;
+                }
                 Stop::Failed(e) => {
-                    eprintln!("video: {} stopped: {e}", dev.path.display());
-                    // Straight back to the device if it is still there: a silent dongle is
-                    // reopened, and the demo only shows if it is really gone.
+                    eprintln!("video: {} failed: {e}", dev.path.display());
+                    quiet = false;
+                    // Still there but not working (busy, no permission, a driver fault):
+                    // say so where the user looks, and try again shortly. The demo only
+                    // shows if the device is really gone.
                     if find_device().is_some() {
-                        thread::sleep(Duration::from_millis(500));
+                        failed(&shared, &dev, &e);
+                        thread::sleep(RETRY_AFTER);
                         continue;
                     }
                     format!("{} went away: {e}", dev.card)
@@ -69,7 +90,29 @@ fn run(shared: Arc<Shared>) {
             (Source::Auto, None) => "No capture device found (plug in an HDMI-to-USB dongle).".into(),
             (Source::Demo, _) => "Demo selected.".into(),
         };
+        quiet = false;
         demo_loop(&shared, source, why);
+    }
+}
+
+/// A device that is present but failed: the error on the panel and on the screen.
+fn failed(shared: &Shared, cand: &Candidate, error: &str) {
+    publish_status(
+        shared,
+        VideoStatus {
+            label: "Capture error".into(),
+            device: format!("{} ({})", cand.card, cand.path.display()),
+            width: 0,
+            height: 0,
+            fps: 0,
+            sizes: cand.sizes.clone(),
+            signal: false,
+        },
+    );
+    if shared.viewers.load(Ordering::Relaxed) > 0 {
+        let rgb = demo::message("Capture error", &format!("{}: {error}", cand.card), 0);
+        let jpeg = mjpeg::encode(&rgb, demo::W as u32, demo::H as u32, jpeg_encoder::ColorType::Rgb, 70);
+        publish_frame(shared, jpeg, demo::W as u32, demo::H as u32);
     }
 }
 
@@ -140,7 +183,7 @@ fn pick_size(cand: &Candidate, settings: &VideoSettings) -> (u32, u32) {
     cand.sizes.iter().copied().find(|&(w, h)| w * h <= cap).unwrap_or(fallback)
 }
 
-fn capture(shared: &Arc<Shared>, cand: &Candidate) -> Stop {
+fn capture(shared: &Arc<Shared>, cand: &Candidate, quiet: bool) -> Stop {
     let fail = |e: std::io::Error| Stop::Failed(e.to_string());
     let settings = shared.settings.lock().unwrap().clone();
     let dev = match Device::open(&cand.path) {
@@ -165,13 +208,13 @@ fn capture(shared: &Arc<Shared>, cand: &Candidate) -> Stop {
 
     let label = |fps| format!("{width}x{height} {name} {fps}fps");
     let mut status = VideoStatus {
-        label: label(0),
+        label: if quiet { "No signal".into() } else { label(0) },
         device: format!("{} ({})", cand.card, cand.path.display()),
         width,
         height,
         fps: 0,
         sizes: cand.sizes.clone(),
-        signal: true,
+        signal: !quiet,
     };
     publish_status(shared, status.clone());
 
@@ -187,11 +230,11 @@ fn capture(shared: &Arc<Shared>, cand: &Candidate) -> Stop {
         match wait_readable(fd, Duration::from_millis(500)) {
             Err(e) => return fail(e),
             Ok(false) => {
-                let quiet = last_frame.elapsed();
-                if quiet >= REOPEN_AFTER {
-                    return Stop::Failed("no frames for 10 s".into());
+                let silence = last_frame.elapsed();
+                if silence >= REOPEN_AFTER {
+                    return Stop::Silent;
                 }
-                if quiet >= NO_SIGNAL_AFTER {
+                if silence >= NO_SIGNAL_AFTER {
                     if status.signal {
                         status.signal = false;
                         status.fps = 0;

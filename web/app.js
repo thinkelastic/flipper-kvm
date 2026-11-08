@@ -303,6 +303,10 @@ function onButton(e) {
 }
 stage.addEventListener("mousedown", onButton);
 stage.addEventListener("mouseup", onButton);
+// A drag that ends outside the picture still lets go of the button on the target.
+window.addEventListener("mouseup", (e) => {
+  if (controlling && e.target !== stage && !stage.contains(e.target)) onButton(e);
+});
 stage.addEventListener("contextmenu", (e) => e.preventDefault());
 
 let wheelY = 0, wheelX = 0;
@@ -390,6 +394,7 @@ $("#paste").onclick = () => {
   sel.replaceChildren(...((state && state.layouts) || ["us"]).map((l) => new Option(l.toUpperCase(), l)));
   sel.value = layout();
   $("#pastetext").value = "";
+  $("#pastedlg").returnValue = ""; // it keeps the last close's value; Escape must not type
   $("#pastedlg").showModal();
 };
 $("#layout").addEventListener("change", (e) => localStorage.setItem("kvm.layout", e.target.value));

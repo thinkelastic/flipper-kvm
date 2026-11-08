@@ -295,9 +295,7 @@ impl Hid {
             Input::Type { text, layout } => {
                 self.stop_typing().await;
                 self.release().await;
-                let layout = layout
-                    .filter(|l| keymap::LAYOUTS.contains(&l.as_str()))
-                    .unwrap_or_else(|| self.shared.config.layout.clone());
+                let layout = layout.filter(|l| keymap::LAYOUTS.contains(&l.as_str())).unwrap_or_else(|| self.shared.config.layout.clone());
                 let (strokes, skipped) = strokes(&text, &layout);
                 if skipped > 0 {
                     eprintln!("hid: {skipped} characters have no key on the {layout} layout");

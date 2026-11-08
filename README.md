@@ -44,9 +44,10 @@ or no working OS yet (BIOS, installers, a crashed system).
 
 ## Install
 
-1. Install **KVM** from the App Manager on the Flipper (Apps › App Manager), or copy
-   `flipper-kvm-aarch64.fap.AppImage` into `~/Apps/Network/` on the Flipper (over MTP,
-   or `scp`).
+1. Download `flipper-kvm-aarch64.fap.AppImage` from the latest release (its `.sha256`
+   is beside it) and copy it into `~/Apps/Network/` on the Flipper (over MTP, or
+   `scp`), then `chmod 755` it. Once the app is in Flipper's catalogue it will also be
+   under Apps › App Manager.
 2. Open **Apps › Network › KVM**. The first time, the panel says the USB side is not set
    up: press **Setup**, then **Setup** again to confirm. This installs a small root
    helper (`/usr/local/sbin/flipper-kvm-gadget`), a systemd unit and a udev rule, using

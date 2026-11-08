@@ -27,6 +27,7 @@ firmware ships so Flipper's bundler can make the `.fap.AppImage`:
 
 ```
 ./dev.sh test        # unit and router tests
+./dev.sh lint        # cargo fmt --check and clippy, as CI runs them
 ./dev.sh run         # bundle, install into ~/Apps/Network, open on the panel
 ./dev.sh headless    # the server alone; the code is printed
 ./dev.sh gadget      # install the USB side by hand (the panel's Setup does the same)
@@ -56,11 +57,14 @@ libm and libgcc_s:
 
 ## Releasing
 
-1. Bump `version` in `Cargo.toml`, add the changes to `CHANGELOG.md`.
+1. Bump `version` in `Cargo.toml`, date the version in `CHANGELOG.md`.
 2. `./dev.sh licenses` if dependencies changed; commit `Cargo.lock` and
    `THIRD-PARTY-LICENSES.md`.
-3. Tag `vX.Y.Z` and push: CI (`.github/workflows/ci.yml`) tests, bundles on an arm64
-   runner, and attaches the AppImage and its SHA-256 to a GitHub release.
+3. `./dev.sh lint && ./dev.sh test`, then `./dev.sh run` and `./dev.sh e2e CODE` against
+   the device.
+4. Tag `vX.Y.Z` and push: CI (`.github/workflows/ci.yml`) formats, lints, tests,
+   bundles on an arm64 runner, and attaches the AppImage and its SHA-256 to a GitHub
+   release.
 
 ### App Manager catalogue
 

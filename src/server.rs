@@ -55,6 +55,8 @@ pub async fn serve(shared: Arc<Shared>) -> std::io::Result<()> {
     let (cert, key) = tls::certificate(&data_dir())?;
     *shared.fingerprint.lock().unwrap() = tls::fingerprint(&cert);
     shared.changed();
+    // No upload can be in progress yet: what is left over from an interrupted one goes.
+    drive::remove_partials();
     let config = RustlsConfig::from_pem(cert, key).await?;
     let port = shared.config.port;
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
@@ -85,10 +87,7 @@ pub fn router(shared: Arc<Shared>) -> Router {
         .route("/api/drive/mount", post(drive_mount))
         .route("/api/drive/eject", post(drive_eject))
         .route("/api/drive/create", post(drive_create))
-        .route(
-            "/api/drive/images/{name}",
-            put(drive_upload).get(drive_download).delete(drive_delete).layer(DefaultBodyLimit::disable()),
-        )
+        .route("/api/drive/images/{name}", put(drive_upload).get(drive_download).delete(drive_delete).layer(DefaultBodyLimit::disable()))
         .layer(middleware::from_fn(guard))
         .with_state(shared)
 }
@@ -442,9 +441,8 @@ async fn video(app: Arc<Shared>, token: String, mut socket: WebSocket) {
 
 async fn drive_state(State(app): App, headers: HeaderMap) -> Response {
     require!(app, headers);
-    let (images, free, mounted) = tokio::task::spawn_blocking(|| (drive::list(), drive::free_bytes(), drive::mounted()))
-        .await
-        .unwrap_or_default();
+    let (images, free, mounted) =
+        tokio::task::spawn_blocking(|| (drive::list(), drive::free_bytes(), drive::mounted())).await.unwrap_or_default();
     Json(json!({
         "available": drive::available(),
         "images": images,
@@ -468,7 +466,6 @@ async fn drive_mount(State(app): App, headers: HeaderMap, Json(body): Json<Mount
     match tokio::task::spawn_blocking(move || drive::mount(&name, mode)).await.unwrap() {
         Ok(()) => {
             app.audit.log(format!("drive: mounted {} as {}", body.name, mode.name()));
-            *app.drive.lock().unwrap() = Some((body.name, mode.name().into()));
             app.changed();
             Json(json!({"ok": true})).into_response()
         }
@@ -481,7 +478,6 @@ async fn drive_eject(State(app): App, headers: HeaderMap) -> Response {
     match tokio::task::spawn_blocking(drive::eject).await.unwrap() {
         Ok(()) => {
             app.audit.log("drive: ejected");
-            *app.drive.lock().unwrap() = None;
             app.changed();
             Json(json!({"ok": true})).into_response()
         }
@@ -523,10 +519,14 @@ async fn drive_delete(State(app): App, headers: HeaderMap, Path(name): Path<Stri
 }
 
 /// The request body is written to `<name>.part` and renamed when complete, so a broken
-/// upload never leaves a half image under the real name.
+/// upload never leaves a half image under the real name. The part file is created
+/// exclusively, so two uploads of the same name cannot write into one file.
 async fn drive_upload(State(app): App, headers: HeaderMap, Path(name): Path<String>, body: Body) -> Response {
     require!(app, headers);
     let Some(path) = drive::path_of(&name) else { return error(StatusCode::BAD_REQUEST, "bad image name") };
+    if name.ends_with(".part") {
+        return error(StatusCode::BAD_REQUEST, "bad image name");
+    }
     let max = app.config.max_image_mib * 1024 * 1024;
     let len: Option<u64> = headers.get(header::CONTENT_LENGTH).and_then(|v| v.to_str().ok()).and_then(|v| v.parse().ok());
     if let Some(len) = len {
@@ -541,9 +541,12 @@ async fn drive_upload(State(app): App, headers: HeaderMap, Path(name): Path<Stri
         return error(StatusCode::CONFLICT, "an image with that name exists; delete it first");
     }
     let _ = tokio::fs::create_dir_all(drive::images_dir()).await;
-    let part = path.with_extension(format!("{}.part", path.extension().and_then(|e| e.to_str()).unwrap_or("")));
-    let mut file = match tokio::fs::File::create(&part).await {
+    let part = drive::partial_path(&path);
+    let mut file = match tokio::fs::OpenOptions::new().write(true).create_new(true).open(&part).await {
         Ok(f) => f,
+        Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {
+            return error(StatusCode::CONFLICT, "an upload with that name is already in progress");
+        }
         Err(e) => return error(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
     };
     let mut written: u64 = 0;

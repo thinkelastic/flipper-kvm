@@ -1,0 +1,4 @@
+name = "KVM"
+wayland = "./target/release/flipper-kvm"
+icon = "icon.png"
+folder = "Network"

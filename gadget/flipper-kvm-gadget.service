@@ -1,0 +1,16 @@
+[Unit]
+Description=Flipper One KVM: USB keyboard and mouse gadget
+After=sys-kernel-config.mount systemd-udevd.service usb-ncm-msc-mtp-gadget.service usb-ncm-msc-gadget.service usb-ncm-gadget.service usb-msc-gadget.service
+Requires=sys-kernel-config.mount
+# Flipper's gadget units tear the whole gadget down on stop; take our functions out first.
+PartOf=usb-ncm-msc-mtp-gadget.service usb-ncm-msc-gadget.service usb-ncm-gadget.service usb-msc-gadget.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+Environment=KVM_USER=user
+ExecStart=/usr/local/sbin/flipper-kvm-gadget start
+ExecStop=/usr/local/sbin/flipper-kvm-gadget stop
+
+[Install]
+WantedBy=multi-user.target

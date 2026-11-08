@@ -1,0 +1,83 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  # The flipctl revision Flipper One firmware build 2484 ships; the bundler comes from it.
+  FLIPCTL_REV: 99d8ef816a190026a9ff8eec95f86fa95228d238
+  # ring's C must not use the stack protector: its arm64 canary lives in the dynamic
+  # loader, and the bundler accepts only binaries linking libc, libm and libgcc_s.
+  CFLAGS: -O2 -fno-stack-protector
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: flipper-kvm
+
+      - name: System packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends desktop-file-utils squashfs-tools file \
+            libfontconfig-dev libxkbcommon-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            flipper-kvm/target
+            flipctl-slint/target
+          key: cargo-${{ runner.arch }}-${{ hashFiles('flipper-kvm/Cargo.lock') }}
+
+      - name: Tests
+        working-directory: flipper-kvm
+        run: cargo test --release --locked
+
+      - name: Web page syntax
+        run: node --check flipper-kvm/web/app.js
+
+      - name: flipctl-slint at the firmware's revision
+        run: |
+          git clone --filter=blob:none https://github.com/flipperdevices/flipctl-slint
+          git -C flipctl-slint checkout "$FLIPCTL_REV"
+          ln -s "$GITHUB_WORKSPACE/flipper-kvm" flipctl-slint/apps/flipper-kvm
+
+      - name: Bundle
+        working-directory: flipctl-slint
+        run: tools/appimage/build.sh --native apps/flipper-kvm
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: flipper-kvm-aarch64
+          path: |
+            flipctl-slint/target/appimage/flipper-kvm-aarch64.fap.AppImage
+            flipctl-slint/target/appimage/flipper-kvm-aarch64.fap.AppImage.sha256
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: flipper-kvm-aarch64
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --generate-notes \
+            flipper-kvm-aarch64.fap.AppImage flipper-kvm-aarch64.fap.AppImage.sha256

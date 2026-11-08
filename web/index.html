@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>Flipper One KVM</title>
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<section id="pair" hidden>
+  <div class="card">
+    <img src="/icon.svg" alt="" width="48" height="48">
+    <h1>Flipper One KVM</h1>
+    <p>Enter the code shown on the Flipper's screen.</p>
+    <form id="pairform">
+      <input id="code" inputmode="numeric" autocomplete="one-time-code" maxlength="7"
+             placeholder="123 456" aria-label="Pairing code" autofocus>
+      <button type="submit">Connect</button>
+    </form>
+    <p id="pairerr" class="err" role="alert"></p>
+    <p class="note">Each code works once. Press <b>Code</b> on the Flipper for a new one.
+      To check this connection, compare the certificate's SHA-256 fingerprint in your browser
+      with the one at the bottom of the Flipper's screen.</p>
+  </div>
+</section>
+
+<section id="kvm" hidden>
+  <header>
+    <span class="brand"><img src="/icon.svg" alt="" width="20" height="20">KVM</span>
+    <span id="video" class="chip" title="Video"></span>
+    <span id="hid" class="chip" title="USB keyboard and mouse"></span>
+    <span id="link" class="chip" title="Input connection"></span>
+    <span id="stats" class="chip" title="Frames per second, bandwidth, latency"></span>
+    <nav>
+      <details class="menu" id="keysmenu">
+        <summary title="Key combinations">Keys</summary>
+        <div class="menu-items">
+          <button data-combo="ControlLeft AltLeft Delete">Ctrl+Alt+Del</button>
+          <button data-combo="AltLeft Tab">Alt+Tab</button>
+          <button data-combo="AltLeft F4">Alt+F4</button>
+          <button data-combo="MetaLeft">Win / Cmd</button>
+          <button data-combo="MetaLeft KeyR">Win+R</button>
+          <button data-combo="MetaLeft Space">Cmd+Space</button>
+          <button data-combo="MetaLeft Tab">Cmd+Tab</button>
+          <button data-combo="Escape">Esc</button>
+          <button data-combo="PrintScreen">Print Screen</button>
+          <button data-combo="F11">F11</button>
+          <button data-combo="F12">F12</button>
+          <button data-combo="ControlLeft AltLeft F1">Ctrl+Alt+F1</button>
+          <button data-combo="ControlLeft AltLeft F2">Ctrl+Alt+F2</button>
+          <button data-combo="ControlLeft AltLeft F7">Ctrl+Alt+F7</button>
+        </div>
+      </details>
+      <span class="group" role="group" aria-label="Held modifiers">
+        <button class="toggle" data-mod="ControlLeft" aria-pressed="false" title="Hold Ctrl">Ctrl</button>
+        <button class="toggle" data-mod="AltLeft" aria-pressed="false" title="Hold Alt">Alt</button>
+        <button class="toggle" data-mod="ShiftLeft" aria-pressed="false" title="Hold Shift">Shift</button>
+        <button class="toggle" data-mod="MetaLeft" aria-pressed="false" title="Hold Win / Cmd">Win</button>
+      </span>
+      <button id="paste" title="Type text on the remote computer">Paste</button>
+      <button id="drive" title="Virtual USB drive">Drive</button>
+      <button id="settings" title="Video, connection and activity">Settings</button>
+      <button id="kbdbtn" class="touch-only" title="Show the on-screen keyboard">Keyboard</button>
+      <button id="release" title="Let go of every key and button">Release</button>
+      <button id="full" title="Full screen, with keyboard lock where the browser allows it">Full screen</button>
+      <button id="logout" title="End this session">Disconnect</button>
+    </nav>
+  </header>
+  <div id="stage" tabindex="0" aria-label="Remote screen. Click to control.">
+    <canvas id="screen" width="1280" height="720"></canvas>
+    <img id="mjpeg" alt="Remote screen" draggable="false" hidden>
+    <div id="hint">Click the screen to control it. Keys and the mouse then go to the remote computer.</div>
+    <input id="kbd" aria-label="On-screen keyboard input" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+  </div>
+
+  <dialog id="pastedlg">
+    <form method="dialog">
+      <h2>Type text on the remote computer</h2>
+      <textarea id="pastetext" rows="8" maxlength="20000"></textarea>
+      <label class="row">Remote keyboard layout
+        <select id="layout"></select>
+      </label>
+      <p class="note">Typed one key at a time. Characters the layout lacks are skipped.
+        Any key, or Release, stops it.</p>
+      <menu>
+        <button value="cancel">Cancel</button>
+        <button value="ok" class="primary">Type it</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <dialog id="drivedlg">
+    <form method="dialog">
+      <h2>Virtual USB drive</h2>
+      <p id="drivestatus" class="status"></p>
+      <table id="images">
+        <thead><tr><th>Image</th><th>Size</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <p id="driveempty" class="note" hidden>No images yet. Upload an ISO or a disk image, or create a blank disk.</p>
+      <fieldset>
+        <legend>Upload an image</legend>
+        <input type="file" id="upfile">
+        <button type="button" id="upbtn">Upload</button>
+        <progress id="upprog" max="1" value="0" hidden></progress>
+        <span id="upmsg" class="note"></span>
+      </fieldset>
+      <fieldset>
+        <legend>New blank disk</legend>
+        <input id="newname" placeholder="disk.img" maxlength="128" aria-label="File name">
+        <input id="newsize" type="number" min="1" value="1024" aria-label="Size in MiB"> MiB
+        <button type="button" id="newbtn">Create</button>
+      </fieldset>
+      <p id="drivefree" class="note"></p>
+      <p id="driveerr" class="err" role="alert"></p>
+      <menu><button value="close">Close</button></menu>
+    </form>
+  </dialog>
+
+  <dialog id="settingsdlg">
+    <form method="dialog">
+      <h2>Settings</h2>
+      <label class="row">Source
+        <select id="source"><option value="auto">Capture device</option><option value="demo">Demo screen</option></select>
+      </label>
+      <label class="row">Resolution
+        <select id="size"></select>
+      </label>
+      <label class="row">Frames per second <output id="fpsval"></output>
+        <input id="fps" type="range" min="1" max="60">
+      </label>
+      <label class="row">Quality <output id="qval"></output>
+        <input id="quality" type="range" min="30" max="95">
+      </label>
+      <p class="note">Quality applies to frames the Flipper encodes (YUYV capture, demo). MJPEG from a dongle is sent as it comes.</p>
+      <label class="row">Video over
+        <select id="transport"><option value="ws">WebSocket (lowest latency)</option><option value="mjpeg">MJPEG stream (compatibility)</option></select>
+      </label>
+      <h3>Certificate SHA-256</h3>
+      <p id="fp" class="mono"></p>
+      <h3>Activity</h3>
+      <pre id="audit"></pre>
+      <menu><button value="close">Close</button></menu>
+    </form>
+  </dialog>
+</section>
+
+<script src="/app.js"></script>
+</body>
+</html>

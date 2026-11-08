@@ -1,0 +1,47 @@
+[workspace]
+
+[package]
+name = "flipper-kvm"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+readme = "README.md"
+publish = false
+description = "KVM over IP for Flipper One: capture a computer's screen, drive its keyboard and mouse over USB, from a browser"
+
+[dependencies]
+# Flipper's app framework, pinned to the flipctl revision firmware build 2484 ships.
+flipctl-app = { git = "https://github.com/flipperdevices/flipctl-slint", rev = "99d8ef816a190026a9ff8eec95f86fa95228d238" }
+slint = { version = "1.17", default-features = false, features = [
+    "compat-1-2", "backend-winit-wayland", "renderer-software", "std" ] }
+
+tokio = { version = "1", features = ["rt-multi-thread", "net", "sync", "time", "macros", "fs", "io-util"] }
+axum = { version = "0.8", default-features = false, features = ["http1", "tokio", "ws", "json", "query"] }
+axum-server = { version = "0.7", features = ["tls-rustls-no-provider"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12", "logging"] }
+rcgen = { version = "0.13", default-features = false, features = ["ring", "pem"] }
+futures-util = { version = "0.3", default-features = false, features = ["std"] }
+ring = "0.17"
+toml = { version = "0.8", default-features = false, features = ["parse"] }
+bytes = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rand = "0.9"
+libc = "0.2"
+if-addrs = "0.13"
+
+linuxvideo = "0.3"
+jpeg-encoder = "0.6"
+font8x8 = { version = "0.3", default-features = false, features = ["std", "unicode"] }
+
+[dev-dependencies]
+flipctl-app = { git = "https://github.com/flipperdevices/flipctl-slint", rev = "99d8ef816a190026a9ff8eec95f86fa95228d238", features = ["render"] }
+tower = { version = "0.5", features = ["util"] }
+http-body-util = "0.1"
+
+[build-dependencies]
+flipctl-app = { git = "https://github.com/flipperdevices/flipctl-slint", rev = "99d8ef816a190026a9ff8eec95f86fa95228d238", features = ["build"] }
+
+[profile.release]
+opt-level = 3
+strip = true

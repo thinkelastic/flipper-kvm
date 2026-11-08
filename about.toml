@@ -1,0 +1,33 @@
+# Configuration for `cargo about generate` (see dev.sh licenses), adapted from
+# flipctl-slint's. THIRD-PARTY-LICENSES.md is regenerated from this so the attribution
+# shipped with the binary always matches Cargo.lock. flipper-kvm's own code is MIT, but
+# the binary links the Slint toolkit (through flipctl-app), for which the GPL-3.0-only
+# option of its tri-license is elected; that makes the combined binary GPL-3.0-only.
+
+# Evaluate the dependency graph for the target the binary actually ships on.
+targets = ["aarch64-unknown-linux-gnu"]
+
+# Ignore dev-dependencies (the golden-image harness uses `png`, tests only):
+# they are not part of the distributed binary.
+ignore-dev-dependencies = true
+
+# Licenses we are willing to comply under, in preference order. For a crate offering a
+# choice, the first match wins, so MIT is chosen wherever possible. GPL-3.0-only is
+# accepted solely to satisfy Slint's tri-license. IJG is for jpeg-encoder, whose
+# encoder derives from the Independent JPEG Group's work (attributed in README.md).
+accepted = [
+    "MIT",
+    "Apache-2.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Zlib",
+    "Unicode-3.0",
+    "Unlicense",
+    "0BSD",
+    "BSL-1.0",
+    "CC0-1.0",
+    "NCSA",
+    "GPL-3.0-only",
+    "IJG",
+]

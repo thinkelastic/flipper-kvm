@@ -34,6 +34,14 @@ jobs:
         with:
           components: clippy, rustfmt
 
+      # Cloned before the cache is restored: the cache holds flipctl-slint/target, and a
+      # clone into a directory that already exists fails.
+      - name: flipctl-slint at the firmware's revision
+        run: |
+          git clone --filter=blob:none https://github.com/flipperdevices/flipctl-slint
+          git -C flipctl-slint checkout "$FLIPCTL_REV"
+          ln -s "$GITHUB_WORKSPACE/flipper-kvm" flipctl-slint/apps/flipper-kvm
+
       - uses: actions/cache@v6
         with:
           path: |
@@ -60,12 +68,6 @@ jobs:
           node --check flipper-kvm/web/app.js
           python3 -m py_compile flipper-kvm/tests/e2e.py
           bash -n flipper-kvm/gadget/flipper-kvm-gadget.sh flipper-kvm/gadget/install.sh flipper-kvm/dev.sh
-
-      - name: flipctl-slint at the firmware's revision
-        run: |
-          git clone --filter=blob:none https://github.com/flipperdevices/flipctl-slint
-          git -C flipctl-slint checkout "$FLIPCTL_REV"
-          ln -s "$GITHUB_WORKSPACE/flipper-kvm" flipctl-slint/apps/flipper-kvm
 
       - name: Bundle
         working-directory: flipctl-slint

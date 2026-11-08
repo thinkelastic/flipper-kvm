@@ -19,7 +19,7 @@ sourcecode:
   type: git
   location:
     origin: https://github.com/thinkelastic/flipper-kvm.git
-    commit_sha: a47e80e20d77ff5ecc206dba7370dc36c28d376d
+    commit_sha: 7cdfcd9e2109ddd8e1d68abeedc6a442a0835da1
 
 short_description: Use a computer from your browser through the Flipper. It captures the computer's screen and is its USB keyboard, mouse and drive.
 

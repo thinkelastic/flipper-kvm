@@ -11,7 +11,7 @@
 name: KVM
 id: flipper_kvm
 category: USB
-version: "0.1"
+version: "0.2"
 author: Alberto (github.com/thinkelastic)
 icon: icon.png
 
@@ -19,7 +19,7 @@ sourcecode:
   type: git
   location:
     origin: https://github.com/thinkelastic/flipper-kvm.git
-    commit_sha: 7cdfcd9e2109ddd8e1d68abeedc6a442a0835da1
+    commit_sha: c38bf4d1d18756d600876d07c6b91746596675ef
 
 short_description: Use a computer from your browser through the Flipper. It captures the computer's screen and is its USB keyboard, mouse and drive.
 
